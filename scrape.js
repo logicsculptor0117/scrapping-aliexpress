@@ -28,7 +28,7 @@ app.get('/api/products/search', async (req, res) => {
   pagination = req.query.pagination;
   getKeywordArr();
   const products = await generateAliexpress();
-  console.log(products.length)
+  // console.log(products.length)
   res.json(products);
 });
 
@@ -95,11 +95,13 @@ const scraping = async (page, browser) => {
 
       temp['image'] = [];
       tempImage = $('.images--imageWindow--1Z-J9gn', e)[0];
-      console.log(tempImage)
-      if(tempImage) {
+      if (tempImage) {
         tempImage.children.forEach(image => {
           temp['image'].push(image.attribs.src);
         });
+      } else {
+        tempImage = $('.multi--img--1IH3lZb', e)[0];
+        temp['image'].push(tempImage.attribs.src);
       }
 
       temp['storeName'] = '';
@@ -115,20 +117,27 @@ const scraping = async (page, browser) => {
       }
       data.push(temp);
     });
+
+    const tempPagination = $('.comet-pagination-item');
+    const totpage = tempPagination[tempPagination.length - 1].children[0].children[0].data;
+    console.log(totpage)
     await browser.close();
+    const res = {};
+    res['details'] = data;
+    res['totalPage'] = totpage;
+    return res;
   } catch (error) {
     console.log('scraping function error:', error);
     await delay(200);
     await scrollDown(page);
     await scraping(page, browser);
   }
-  return data;
 }
 
 const generateAliexpress = async () => {
   const browser = await puppeteer.launch({
     // headless: 'new',
-    headless: false,
+    headless: true,
     defaultViewport: { width: 1920, height: 1080 }
   });
 
