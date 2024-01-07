@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "aliexpress-product-scraper": "^2.0.2",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "puppeteer": "^21.7.0"
+  }
+}
