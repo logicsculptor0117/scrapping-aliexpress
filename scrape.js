@@ -19,7 +19,6 @@ app.get('/api/products/new', async (req, res) => {
   pagination = 1;
   getKeywordArr();
   const products = await generateAliexpress();
-  console.log(products.length)
   res.json(products);
 });
 
@@ -28,7 +27,6 @@ app.get('/api/products/search', async (req, res) => {
   pagination = req.query.pagination;
   getKeywordArr();
   const products = await generateAliexpress();
-  // console.log(products.length)
   res.json(products);
 });
 
@@ -68,13 +66,24 @@ const scrollDown = async (page) => {
 }
 
 const scraping = async (page, browser) => {
+  let res = {};
+  let index = 0;
   try {
     data = [];
     const htmlcontent = await page.content();
     const $ = cheerio.load(htmlcontent);
+    const sorryPage = $('.main2023--sorry--1DAkjAv')[0];
+    if (sorryPage) {
+      const res = {};
+      res['details'] = [];
+      res['totalPage'] = 0;
+      res['error'] = 'search error';
+      return res;
+    }
     const targetContent = $('#card-list');
     if (!targetContent) return data;
     targetContent[0].children.forEach(e => {
+      index++;
       let temp = {};
 
       tempUrl = $('.multi--container--1UZxxHY', e)[0];
@@ -117,39 +126,43 @@ const scraping = async (page, browser) => {
       }
       data.push(temp);
     });
-
     const tempPagination = $('.comet-pagination-item');
     const totpage = tempPagination[tempPagination.length - 1].children[0].children[0].data;
-    console.log(totpage)
-    await browser.close();
-    const res = {};
     res['details'] = data;
     res['totalPage'] = totpage;
+    await browser.close();
+    console.log(res , 'ok1');
     return res;
   } catch (error) {
-    console.log('scraping function error:', error);
+    console.log('scraping function error:', error, index);
     await delay(200);
     await scrollDown(page);
-    await scraping(page, browser);
+    return await scraping(page, browser);
   }
 }
 
 const generateAliexpress = async () => {
-  const browser = await puppeteer.launch({
-    // headless: 'new',
-    headless: true,
-    defaultViewport: { width: 1920, height: 1080 }
-  });
-
-  const page = await browser.newPage();
-  await page.goto(`https://www.aliexpress.us/w/wholesale${keywordRes}.html?page=${pagination}&g=y&SearchText=${keywordRes1}`);
+  let browser;
+  let page;
 
   try {
+    browser = await puppeteer.launch({
+      // headless: 'new',
+      headless: false,
+      defaultViewport: { width: 1920, height: 1080 }
+    });
+
+    page = await browser.newPage();
+    await page.goto(`https://www.aliexpress.us/w/wholesale${keywordRes}.html?page=${pagination}&g=y&SearchText=${keywordRes1}`);
+
     await scrollDown(page);
     const data = await scraping(page, browser);
     return data;
 
   } catch (error) {
+    if (error.message.includes('30000 seconds')) {
+      generateAliexpress();
+    }
     console.log('generateAliexpress error: ', error)
     await delay(200);
     await scrollDown(page);
